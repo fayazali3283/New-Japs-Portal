@@ -1,9 +1,13 @@
 
 import React from 'react';
 
-const JapsLoader: React.FC = () => {
+interface JapsLoaderProps {
+  isExiting?: boolean;
+}
+
+const JapsLoader: React.FC<JapsLoaderProps> = ({ isExiting = false }) => {
   return (
-    <div className="fixed inset-0 bg-[#07090e] flex flex-col items-center justify-center z-[100] transition-opacity duration-1000 overflow-hidden">
+    <div className={`fixed inset-0 bg-[#07090e] flex flex-col items-center justify-center z-[100] transition-all duration-700 ease-in-out overflow-hidden ${isExiting ? 'opacity-0 scale-105 pointer-events-none' : 'opacity-100 scale-100'}`}>
       {/* Dynamic Background Glows */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
       

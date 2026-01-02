@@ -18,24 +18,39 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [isAppLoading, setIsAppLoading] = useState(true);
+  const [isExitingLoader, setIsExitingLoader] = useState(false);
   const [isDashboardLoading, setIsDashboardLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Initial App Load Simulation
+  // Initial App Load sequence with smooth fade-out
   useEffect(() => {
-    const timer = setTimeout(() => setIsAppLoading(false), 2800);
+    const timer = setTimeout(() => {
+      setIsExitingLoader(true);
+      setTimeout(() => setIsAppLoading(false), 800); // Wait for fade animation
+    }, 2800);
     return () => clearTimeout(timer);
   }, []);
 
+  const handlePortalSwitch = (show: boolean) => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowAuth(show);
+      setIsTransitioning(false);
+    }, 450); // Matches the duration of the transition CSS
+  };
+
   const handleLogin = (loggedUser: User) => {
-    setIsAppLoading(true);
+    setIsTransitioning(true);
     setIsSidebarOpen(false);
+    
     setTimeout(() => {
       setUser(loggedUser);
       setShowAuth(false);
-      setIsAppLoading(false);
       triggerDashboardLoad();
-    }, 2000);
+      setIsTransitioning(false);
+    }, 500);
   };
 
   const triggerDashboardLoad = () => {
@@ -44,13 +59,14 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
-    setIsAppLoading(true);
+    setIsTransitioning(true);
     setIsSidebarOpen(false);
+    
     setTimeout(() => {
       setUser(null);
       setShowAuth(false);
-      setIsAppLoading(false);
-    }, 1500);
+      setIsTransitioning(false);
+    }, 500);
   };
 
   const handleGoHome = () => {
@@ -58,74 +74,69 @@ const App: React.FC = () => {
     if (user) {
       triggerDashboardLoad();
     } else {
-      setShowAuth(false);
+      handlePortalSwitch(false);
     }
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  // Return loader with exit state
   if (isAppLoading) {
-    return <JapsLoader />;
+    return <JapsLoader isExiting={isExitingLoader} />;
   }
-
-  // Public Landing State
-  if (!user && !showAuth) {
-    return <PublicLanding onEnterPortal={() => setShowAuth(true)} />;
-  }
-
-  // Auth Portal State
-  if (!user && showAuth) {
-    return <AuthPortal onLogin={handleLogin} onBack={() => setShowAuth(false)} />;
-  }
-
-  const renderDashboardContent = () => {
-    if (isDashboardLoading) {
-      return <SkeletonDashboard />;
-    }
-
-    switch (user?.role) {
-      case AppRole.STUDENT: return <StudentDashboard />;
-      case AppRole.TEACHER: return <TeacherDashboard user={user} />;
-      case AppRole.SECTION_HEAD: return <SectionHeadDashboard user={user} />;
-      case AppRole.SECTIONAL_HEAD: return <SectionalHeadDashboard user={user} />;
-      case AppRole.PRINCIPAL: return <PrincipalDashboard />;
-      case AppRole.ADMIN: return <AdminDashboard user={user} />;
-      default: return <div className="p-10 text-center text-slate-500">Node path not resolved for role {user?.role}</div>;
-    }
-  };
 
   return (
-    <div className="flex min-h-screen bg-[#07090e] text-slate-300 font-sans overflow-hidden">
-      {/* Sidebar - Desktop and Mobile Overlay */}
-      <Sidebar 
-        role={user!.role} 
-        onLogoClick={handleGoHome} 
-        isOpen={isSidebarOpen} 
-        onClose={() => setIsSidebarOpen(false)} 
-      />
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <Header 
-          user={user!} 
-          onLogout={handleLogout} 
-          onLogoClick={handleGoHome}
-          onMenuToggle={toggleSidebar}
-        />
-        
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto relative scrollbar-hide">
-          <div className="max-w-7xl mx-auto">
-            {renderDashboardContent()}
-          </div>
-        </main>
-      </div>
+    <div className={`min-h-screen bg-[#07090e] transition-all duration-500 ease-in-out ${isTransitioning ? 'opacity-0 scale-[0.98] blur-md' : 'opacity-100 scale-100 blur-0'}`}>
+      {!user && !showAuth && (
+        <PublicLanding onEnterPortal={() => handlePortalSwitch(true)} />
+      )}
 
-      {/* Mobile Sidebar Backdrop */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {!user && showAuth && (
+        <AuthPortal onLogin={handleLogin} onBack={() => handlePortalSwitch(false)} />
+      )}
+
+      {user && (
+        <div className="flex min-h-screen bg-[#07090e] text-slate-300 font-sans overflow-hidden">
+          <Sidebar 
+            role={user.role} 
+            onLogoClick={handleGoHome} 
+            isOpen={isSidebarOpen} 
+            onClose={() => setIsSidebarOpen(false)} 
+          />
+          
+          <div className="flex-1 flex flex-col min-w-0 h-screen">
+            <Header 
+              user={user} 
+              onLogout={handleLogout} 
+              onLogoClick={handleGoHome}
+              onMenuToggle={toggleSidebar}
+            />
+            
+            <main className="flex-1 p-4 md:p-8 overflow-y-auto relative scrollbar-hide">
+              <div className="max-w-7xl mx-auto transition-opacity duration-300">
+                {isDashboardLoading ? (
+                  <SkeletonDashboard />
+                ) : (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out">
+                    {user.role === AppRole.STUDENT && <StudentDashboard />}
+                    {user.role === AppRole.TEACHER && <TeacherDashboard user={user} />}
+                    {user.role === AppRole.SECTION_HEAD && <SectionHeadDashboard user={user} />}
+                    {user.role === AppRole.SECTIONAL_HEAD && <SectionalHeadDashboard user={user} />}
+                    {user.role === AppRole.PRINCIPAL && <PrincipalDashboard />}
+                    {user.role === AppRole.ADMIN && <AdminDashboard user={user} />}
+                  </div>
+                )}
+              </div>
+            </main>
+          </div>
+
+          {isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden animate-in fade-in duration-300"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+        </div>
       )}
     </div>
   );

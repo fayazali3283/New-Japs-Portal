@@ -10,10 +10,18 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
+            background-color: #07090e; /* Dark background to match app theme */
+            color: #cbd5e1;
+            margin: 0;
+            overflow: hidden;
         }
         .rounded-12 {
             border-radius: 12px;
+        }
+        /* Prevent scrollbar flashing */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
         }
     </style>
 <script type="importmap">
