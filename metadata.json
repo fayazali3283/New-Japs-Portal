@@ -1,0 +1,7 @@
+{
+  "name": "JAPS School Management System",
+  "description": "A high-fidelity, modern school management system for principals and parents, featuring an approvals center and academic portals.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
